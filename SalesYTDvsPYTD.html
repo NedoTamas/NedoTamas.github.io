@@ -1,0 +1,185 @@
+<!DOCTYPE HTML>
+<!--
+	Forty by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+	<head>
+		<title>YTD vs PYTD</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="assets/css/main.css" />
+		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+	</head>
+	<body class="is-preload">
+
+		<!-- Wrapper -->
+			<div id="wrapper">
+
+				<!-- Header -->
+					
+
+				<!-- Menu -->
+					
+
+				<!-- Main -->
+					<div id="main" class="alt">
+
+						<!-- One -->
+							<section id="one">
+								<div class="inner">
+									<header class="major">
+										<h1>YTD vs PYTD performance analysis</h1>
+									</header>
+									
+										<iframe title="SalesPortfolio" width="1024" height="612" src="https://app.powerbi.com/view?r=eyJrIjoiN2I2NThhMTgtYzQwNi00NWFhLWE1ZjQtMzMxZjczNjI0MGFkIiwidCI6ImIwYTRkNjJhLWI0ODgtNDc5NS1hMzM1LTk5NTY2MmM4ZjgyMCIsImMiOjl9" frameborder="0" allowFullScreen="true"></iframe>
+									
+									<h4>Aimed to make a visualization to be able to:</h4>
+									<ul>
+										<li>Compare a year's data with the previous year's data</li>
+										<li>Choose the year</li>
+										<li>Choose the Category</li>
+									</ul>
+									<h4>Design choices:</h4>
+									<ul></ul>
+										<li>Made the visualization dynamic, so new data can be added and it will be represented on the Report</li>
+										<li>Made the report future proof</li>
+									</ul><br><br>
+									<h2>Visualization choices:</h2>
+										<ul>
+											<li>On the top left Combo (Column & Line) chart I visualized YTD and PYTD data, and divided the column by the Sales Channels.<br>
+												It shows that the Store, and Online sales producing the most profit.<br>
+												The organization sold more products in 2019 April and May compared to 2020, however in 2020 during the same months the Gross Profit was higher compared to the previous year.</li>
+											<li>On the bottom left Heat Map I visualized the distribution of the main KPI-s.<br>
+												There are 5 main areas where the Profit is concentrated during the years.</li>
+											<li>On the bottom right Waterfall Chart I visualized the difference between the YTD and PYTD data.<br>
+												It shows that the profit growth is constant until 2019 June where it begins to stagnate until 2020 January where it starts to increase again.<br>
+												During that year we can notice sudden increases / decreases in profit, sold quantity.</li>
+												<li>
+													On the top right Scatter Chart I visualized the City profabilites.<br>
+												</li>
+										</ul>
+									
+									<br>
+									<h4>Documentation:</h4>
+									<h5>Power Query</h5>
+									<p>Checked for null values / errors / dismatching primary key names<br>
+										Removed Primary key Duplicates<br>
+										Corrected Data Types<br>
+										Renamed queries to Dim/Fact for readability<br>
+										Merged the Location and Region table to avoid a Header/Description model, since a Star model has a better performance<br>
+										</p>
+										<span class="image"><img src="images/DataModel.png" alt="">				
+										</span>
+
+										<h5>Modelling</h5>
+									<p>
+										Created a date table for measures to use<br>
+										
+										<pre><code>Dim_Date = CALENDAR(
+		DATE(2018,01,01),
+		DATE(2022,12,31)
+		)</code></pre></p>
+									<p>Created a measure that Checks if we have prior a year data<br>
+									
+<pre><code>Inpast = 
+VAR lastsalesdate = MAX(Fact_Sales[OrderDate])
+VAR lastsalesdatePY = EDATE(lastsalesdate,-12)
+RETURN 
+Dim_Date[Date]<=lastsalesdatePY</code></pre></p>
+									<p>Created a table named Slicer_Values for using later on as a switch</p>
+									<h5>Building Measures:</h5>
+									<p>Created Profit, Gross Sales, Quantity measures what I'll use to create a switch on my Slicer</p>
+<pre><code>Sales = SUM(Fact_Sales[Unit Price])
+	Quantity = SUM(Fact_Sales[Order Quantity])
+	COGs = SUM(Fact_Sales[Unit Cost])
+	GrossProfit = [Sales]-[COGs]</code></pre>
+									<p>Created PriorYearToDate Measures</p>
+<pre><code>PYTD_Sales = CALCULATE(
+    [Sales],SAMEPERIODLASTYEAR(Dim_Date[Date]),
+    Dim_Date[Inpast]=TRUE()
+    )
+PYTD_Quantity = CALCULATE(
+    [Quantity],SAMEPERIODLASTYEAR(Dim_Date[Date]),
+    Dim_Date[Inpast]=TRUE()
+    )
+PYTD_GrossProfit = CALCULATE(
+    [GrossProfit],SAMEPERIODLASTYEAR(Dim_Date[Date]),
+    Dim_Date[Inpast]=TRUE()
+    )
+</code></pre>
+									<p>Creating YearToDate Measures</p>
+<pre><code>YTD_Sales = TOTALYTD(
+	[Sales],Fact_Sales[OrderDate]
+	)
+YTD_Quantity = TOTALYTD(
+	[Quantity],Fact_Sales[OrderDate]
+	)
+YTD_GrossProfit = TOTALYTD(
+	[GrossProfit],Fact_Sales[OrderDate]
+	)</code></pre>
+									<p>Built Switch Measures
+<pre><code>
+	S_PYTD = 
+	VAR selected_value = SELECTEDVALUE(Slicer_Values[Values])
+	VAR result = SWITCH(selected_value,
+		"Sales", [PYTD_Sales],
+		"Quantity", [PYTD_Quantity],
+		"Gross Profit", [PYTD_GrossProfit],
+		BLANK()
+	)
+	RETURN result
+	
+	S_YTD = 
+	VAR selected_value = SELECTEDVALUE(Slicer_Values[Values])
+	VAR result = SWITCH(selected_value,
+		"Sales", [YTD_Sales],
+		"Quantity", [YTD_Quantity],
+		"Gross Profit", [YTD_GrossProfit],
+		BLANK()
+	)
+	RETURN result</code></pre>									</p>
+									<p>Created the comparison Measure</p>
+<pre><code>YTD vs PYTD = [S_YTD]-[S_PYTD]</code></pre>
+			<p>Created Display Folders for the measures</p>	
+			<span class="image"><img src="images/DisplayFolder.png" alt="">				
+			</span>
+			<br><br>
+			<ul class="actions">
+				<li><a href="index.html" class="button next">Back to the main page</a></li>
+			</ul>
+
+								</div>
+							</section>
+
+					</div>
+					
+
+				<!-- Contact -->
+				
+				<!-- Footer -->
+					<footer id="footer">
+						<div class="inner">
+							<ul class="icons">
+								
+								<li><a href="https://github.com/NedoTamas" class="icon brands alt fa-github"><span class="label">GitHub</span></a></li>
+								<li><a href="https://www.linkedin.com/in/tamás-nédó" class="icon brands alt fa-linkedin-in"><span class="label">LinkedIn</span></a></li>
+							</ul>
+							
+						</div>
+					</footer>
+
+			</div>
+
+		<!-- Scripts -->
+			<script src="assets/js/jquery.min.js"></script>
+			<script src="assets/js/jquery.scrolly.min.js"></script>
+			<script src="assets/js/jquery.scrollex.min.js"></script>
+			<script src="assets/js/browser.min.js"></script>
+			<script src="assets/js/breakpoints.min.js"></script>
+			<script src="assets/js/util.js"></script>
+			<script src="assets/js/main.js"></script>
+
+	</body>
+</html>
